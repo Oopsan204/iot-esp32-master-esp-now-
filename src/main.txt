@@ -1,5 +1,5 @@
 /**
- * mac id : E8:68:E7:09:1A:CC
+ * mac id : CC:7B:5C:28:B4:6C
  * esp-now with esp 32
  * mode: reaceive data from mutiple boards (many-to-one)
  * note slave read sensor co, sensor sound
@@ -9,6 +9,9 @@
 
 #include <esp_now.h>
 #include <WiFi.h>
+#include <WiFiType.h>
+#include "WiFi.h"
+#include "FS.h"
 
 // Structure example to receive data
 // Must match the sender structure
@@ -17,10 +20,11 @@ typedef struct struct_message
   int id; // must be unique for each sender board
   int MQ7SensorValue;
   int MAX9814SensorValue;
+  int sendSS1;
 } struct_message;
 
-// Create a struct_message called note1Slave
-struct_message note1Slave;
+// Create a struct_message called dataMaster
+struct_message dataMaster;
 
 // Create a structure to hold the readings from each board
 struct_message board1;
@@ -30,26 +34,28 @@ struct_message board3;
 // Create an array with all the structures
 struct_message boardsStruct[3] = {board1, board2, board3};
 
-const int LED_RED = 20;
-const int LED_GREEN = 22;
+const int LED_RED = 25;
+const int LED_GREEN = 26;
+int Received = 0;
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
+
   char macStr[18];
   Serial.print("Packet received from: ");
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   Serial.println(macStr);
-  memcpy(&note1Slave, incomingData, sizeof(note1Slave));
-  Serial.printf("Board ID %u: %u bytes\n", note1Slave.id, len);
+  memcpy(&dataMaster, incomingData, sizeof(dataMaster));
+  Serial.printf("Board ID %u: %u bytes\n", dataMaster.id, len);
   // Update the structures with the new incoming data
-  boardsStruct[note1Slave.id - 1].MQ7SensorValue = note1Slave.MQ7SensorValue;
-  boardsStruct[note1Slave.id - 1].MAX9814SensorValue = note1Slave.MAX9814SensorValue;
-  Serial.printf("MQ7SensorValue value: %d \n", boardsStruct[note1Slave.id - 1].MQ7SensorValue);
-  Serial.printf("MAX9814SensorValue value: %d \n", boardsStruct[note1Slave.id - 1].MAX9814SensorValue);
+  boardsStruct[dataMaster.id - 1].MQ7SensorValue = dataMaster.MQ7SensorValue;
+  boardsStruct[dataMaster.id - 1].MAX9814SensorValue = dataMaster.MAX9814SensorValue;
+  Serial.printf("MQ7SensorValue value: %d \n", boardsStruct[dataMaster.id - 1].MQ7SensorValue);
+  Serial.printf("MAX9814SensorValue value: %d \n", boardsStruct[dataMaster.id - 1].MAX9814SensorValue);
   Serial.println();
+  Received++;
 }
-
 void setup()
 {
   // Initialize Serial Monitor
@@ -69,8 +75,8 @@ void setup()
   // get recv packer info
   esp_now_register_recv_cb(OnDataRecv);
 
-  pinMode(LED_RED, INPUT);
-  pinMode(LED_GREEN, INPUT);
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
 }
 
 void loop()
@@ -83,18 +89,25 @@ void loop()
   int board3X = boardsStruct[2].x;
   int board3Y = boardsStruct[2].y;*/
 
+  Serial.println(Received);
+
   int board1MAX9814SensorValue = boardsStruct[0].MAX9814SensorValue;
   int board1MQ7SensorValue = boardsStruct[0].MQ7SensorValue;
+  // int board1SendSS= boardsStruct[0].sendSS;
+  Serial.print("MQ7SensorValue: ");
+  Serial.println(board1MQ7SensorValue);
+  Serial.print("MAX9814SensorValue:");
+  Serial.println(board1MAX9814SensorValue);
 
-  if (board1MQ7SensorValue > 300)
+  if (board1MQ7SensorValue == 0)
   {
-    digitalWrite(LED_RED, 1);
-    digitalWrite(LED_GREEN,0);
+    digitalWrite(LED_RED, HIGH);
+    digitalWrite(LED_GREEN, LOW);
   }
   else
   {
-    digitalWrite(LED_RED,0);
-    digitalWrite(LED_GREEN,1);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, HIGH);
   }
 
   delay(5000);
