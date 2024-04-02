@@ -12,6 +12,8 @@
 #include <WiFiType.h>
 #include "WiFi.h"
 #include "FS.h"
+#include <chrono>
+#include <thread>
 
 // Structure example to receive data
 // Must match the sender structure
@@ -37,6 +39,7 @@ struct_message boardsStruct[3] = {board1, board2, board3};
 const int LED_RED = 25;
 const int LED_GREEN = 26;
 int Received = 0;
+auto lastUpdateTime = std::chrono::steady_clock::now();
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
@@ -56,6 +59,31 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
   Serial.println();
   Received++;
 }
+void checkReceivedAndUpdateLED()
+{
+  while (true)
+  {
+    auto currentTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count();
+
+    // Nếu đã qua 5 giây và giá trị Received không thay đổi
+    if (elapsedTime >= 5)
+    {
+      // Bật tắt LED ở đây
+      digitalWrite(LED_RED, LOW);
+      digitalWrite(LED_GREEN, HIGH);
+      delay(500); // Giữ LED trong 0.5 giây
+      digitalWrite(LED_RED, HIGH);
+      digitalWrite(LED_GREEN, LOW);
+
+      // Reset đồng hồ
+      lastUpdateTime = std::chrono::steady_clock::now();
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Đợi 100ms trước khi kiểm tra lại
+  }
+}
+
 void setup()
 {
   // Initialize Serial Monitor
@@ -74,9 +102,13 @@ void setup()
   // Once ESPNow is successfully Init, we will register for recv CB to
   // get recv packer info
   esp_now_register_recv_cb(OnDataRecv);
-
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
+  digitalWrite(LED_RED,LOW);
+  digitalWrite(LED_GREEN,LOW);
+
+  std::thread ledThread(checkReceivedAndUpdateLED);
+  ledThread.detach(); // Cho phép thread chạy độc lập
 }
 
 void loop()
@@ -89,8 +121,14 @@ void loop()
   int board3X = boardsStruct[2].x;
   int board3Y = boardsStruct[2].y;*/
 
+  // Giả sử Received được cập nhật ở đây
+  int newReceivedValue = 1; // Giá trị mới của Received
+  if (newReceivedValue != Received)
+  {
+    Received = newReceivedValue;
+    lastUpdateTime = std::chrono::steady_clock::now(); // Cập nhật thời gian
+  }
   Serial.println(Received);
-
   int board1MAX9814SensorValue = boardsStruct[0].MAX9814SensorValue;
   int board1MQ7SensorValue = boardsStruct[0].MQ7SensorValue;
   // int board1SendSS= boardsStruct[0].sendSS;
@@ -99,16 +137,16 @@ void loop()
   Serial.print("MAX9814SensorValue:");
   Serial.println(board1MAX9814SensorValue);
 
-  if (board1MQ7SensorValue == 0)
+  if (board1MQ7SensorValue > 1500 || board1MAX9814SensorValue > 2000)
   {
     digitalWrite(LED_RED, HIGH);
-    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_GREEN, HIGH);
   }
   else
   {
     digitalWrite(LED_RED, LOW);
-    digitalWrite(LED_GREEN, HIGH);
+    digitalWrite(LED_GREEN, LOW);
   }
 
-  delay(5000);
+  delay(2000);
 }
