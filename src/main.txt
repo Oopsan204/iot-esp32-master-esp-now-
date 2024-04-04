@@ -1,5 +1,5 @@
 /**
- * mac id : CC:7B:5C:28:B4:6C
+ * mac id : CC:7B:5C:27:88:24
  * esp-now with esp 32
  * mode: reaceive data from mutiple boards (many-to-one)
  * note slave read sensor co, sensor sound
@@ -36,8 +36,9 @@ struct_message board3;
 // Create an array with all the structures
 struct_message boardsStruct[3] = {board1, board2, board3};
 
-const int LED_RED = 25;
-const int LED_GREEN = 26;
+const int LED_RED = 5;
+const int LED_GREEN = 22;
+const int LED_Yellow = 19;
 int Received = 0;
 auto lastUpdateTime = std::chrono::steady_clock::now();
 // callback function that will be executed when data is received
@@ -66,18 +67,20 @@ void checkReceivedAndUpdateLED()
     auto currentTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count();
 
-    // Nếu đã qua 5 giây và giá trị Received không thay đổi
-    if (elapsedTime >= 5)
+    // Nếu đã qua 3 giây và giá trị Received không thay đổi
+    if (elapsedTime >= 3)
     {
       // Bật tắt LED ở đây
-      digitalWrite(LED_RED, LOW);
-      digitalWrite(LED_GREEN, HIGH);
-      delay(500); // Giữ LED trong 0.5 giây
-      digitalWrite(LED_RED, HIGH);
-      digitalWrite(LED_GREEN, LOW);
+      digitalWrite(LED_Yellow, HIGH);
+      delay(500);
+      // digitalWrite(LED_Yellow, LOW);
 
       // Reset đồng hồ
       lastUpdateTime = std::chrono::steady_clock::now();
+    }
+    else
+    {
+      digitalWrite(LED_Yellow, LOW);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Đợi 100ms trước khi kiểm tra lại
@@ -104,8 +107,9 @@ void setup()
   esp_now_register_recv_cb(OnDataRecv);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
-  digitalWrite(LED_RED,LOW);
-  digitalWrite(LED_GREEN,LOW);
+  pinMode(LED_Yellow, OUTPUT);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_GREEN, LOW);
 
   std::thread ledThread(checkReceivedAndUpdateLED);
   ledThread.detach(); // Cho phép thread chạy độc lập
@@ -113,13 +117,6 @@ void setup()
 
 void loop()
 {
-  // Acess the variables for each board
-  /*int board1X = boardsStruct[0].x;
-  int board1Y = boardsStruct[0].y;
-  int board2X = boardsStruct[1].x;
-  int board2Y = boardsStruct[1].y;
-  int board3X = boardsStruct[2].x;
-  int board3Y = boardsStruct[2].y;*/
 
   // Giả sử Received được cập nhật ở đây
   int newReceivedValue = 1; // Giá trị mới của Received
@@ -137,14 +134,20 @@ void loop()
   Serial.print("MAX9814SensorValue:");
   Serial.println(board1MAX9814SensorValue);
 
-  if (board1MQ7SensorValue > 1500 || board1MAX9814SensorValue > 2000)
+  if (board1MQ7SensorValue > 2500)
   {
     digitalWrite(LED_RED, HIGH);
-    digitalWrite(LED_GREEN, HIGH);
   }
   else
   {
     digitalWrite(LED_RED, LOW);
+  }
+  if (board1MAX9814SensorValue > 1500)
+  {
+    digitalWrite(LED_GREEN, HIGH);
+  }
+  else
+  {
     digitalWrite(LED_GREEN, LOW);
   }
 
