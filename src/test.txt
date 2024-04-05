@@ -1,0 +1,88 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>AML-PHENIKAA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+  <link rel="icon" href="data:,">
+  <style>
+    html {font-family: Arial; display: inline-block; text-align: center;}
+    p {  font-size: 1.2rem;}
+    body {  margin: 0;}
+    .topnav { overflow: hidden; background-color: #2f4468; color: white; font-size: 1.7rem; }
+    .content { padding: 20px; }
+    .card { background-color: white; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);transition: transform 0.3s, box-shadow 0.3s; }
+    .cards { max-width: 700px; margin: 0 auto; display: grid; grid-gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .reading { font-size: 2.8rem; }
+    .packet { color: #bebebe; }
+    .card.co { color: #e76f51; }
+    .card.sound { color: #2a9d8f; }
+    .reading {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7);
+      }
+      70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topnav">
+    <h3>ESP-NOW AML</h3>
+  </div>
+   <div class="content">
+    <div class="cards">
+      <div class="card co">
+        <h4><i class="fas fa-wind"></i> BOARD #1 - CO LEVEL</h4><p><span class="reading"><span id="co1"></span> ppm</span></p><p class="packet">Reading ID: <span id="rc1"></span></p>
+      </div>
+      <div class="card sound">
+        <h4><i class="fas fa-volume-up"></i> BOARD #1 - SOUND LEVEL</h4><p><span class="reading"><span id="db1"></span> dB</span></p><p class="packet">Reading ID: <span id="rd1"></span></p>
+      </div>
+      <div class="card co">
+        <h4><i class="fas fa-wind"></i> BOARD #2 - CO LEVEL</h4><p><span class="reading"><span id="co2"></span> ppm</span></p><p class="packet">Reading ID: <span id="rc2"></span></p>
+      </div>
+      <div class="card sound">
+        <h4><i class="fas fa-volume-up"></i> BOARD #2 - SOUND LEVEL</h4><p><span class="reading"><span id="db2"></span> dB</span></p><p class="packet">Reading ID: <span id="rd2"></span></p>
+      </div>
+    </div>
+  </div>
+  <script>
+    if (!!window.EventSource) {
+  var source = new EventSource('/events');
+  
+  source.addEventListener('open', function(e) {
+    console.log("Events Connected");
+  }, false);
+  
+  source.addEventListener('error', function(e) {
+    if (e.target.readyState != EventSource.OPEN) {
+      console.log("Events Disconnected");
+    }
+  }, false);
+  
+  source.addEventListener('message', function(e) {
+    console.log("message", e.data);
+  }, false);
+  
+  source.addEventListener('new_readings', function(e) {
+    console.log("new_readings", e.data);
+    var obj = JSON.parse(e.data);
+    document.getElementById("co"+obj.id).innerHTML = obj.MQ7SensorValue.toFixed(2);
+    document.getElementById("db"+obj.id).innerHTML = obj.MAX9814SensorValue.toFixed(2);
+    document.getElementById("rc"+obj.id).innerHTML = obj.readingId;
+    document.getElementById("rd"+obj.id).innerHTML = obj.readingId; // Changed from readingID to readingId for consistency
+  }, false);
+}
+  </script>
+</body>
+</html>
